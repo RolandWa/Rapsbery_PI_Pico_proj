@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sewing Machine Controller</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Sewing Machine Controller</h1>
+
+        <div class="section">
+            <h2>Current Status</h2>
+            <div id="status-display">
+                <div class="status-item">Pedal ADC: <span id="pedal_adc">N/A</span></div>
+                <div class="status-item">Current RPM: <span id="current_rpm">N/A</span></div>
+                <div class="status-item">Motor Power: <span id="motor_power_percent">N/A</span>%</div>
+                <div class="status-item">Needle UP: <span id="needle_up_active">N/A</span></div>
+                <div class="status-item">Needle DOWN: <span id="needle_down_active">N/A</span></div>
+                <div class="status-item">PID Enabled: <span id="pid_enabled">N/A</span></div>
+                <div class="status-item">Max RPM Setting: <span id="max_rpm_setting">N/A</span></div>
+                <div class="status-item">Calibrated Max Motor RPM: <span id="max_motor_rpm_calibrated">N/A</span></div>
+                <div class="status-item">Autotune Active: <span id="autotune_active">N/A</span> (Stage: <span id="autotune_stage">N/A</span>)</div>
+                <div class="status-item">Kp: <span id="autotune_kp">N/A</span>, Ki: <span id="autotune_ki">N/A</span>, Kd: <span id="autotune_kd">N/A</span></div>
+                <div class="status-item">Calibration Active: <span id="calibration_active">N/A</span></div>
+            </div>
+            <button class="red" onclick="stopOperations()">Stop All Operations</button>
+        </div>
+
+        <div class="section">
+            <h2>Calibrations & Tuning</h2>
+            <button onclick="calibrateMaxRpm()">1. Find Max RPM</button>
+            <p>Runs motor at high power to find its maximum free-running RPM. Result will update "Calibrated Max Motor RPM" above and save to config.</p>
+            
+            <button onclick="autotunePid()">2. Autotune PID</button>
+            <p>Initiates a PID autotuning sequence. New Kp, Ki, Kd will be updated above and saved to config.</p>
+        </div>
+
+        <div class="section">
+            <h2>Configuration Parameters</h2>
+            <div id="message-box" class="message" style="display:none;"></div>
+            
+            <label for="max_rpm_setting_input">Max RPM Setting:</label>
+            <input type="number" id="max_rpm_setting_input">
+            <button onclick="setParam('max_rpm_setting', document.getElementById('max_rpm_setting_input').value)">Set & Save</button>
+
+            <label for="pid_enabled_input">PID Enabled:</label>
+            <select id="pid_enabled_input">
+                <option value="true">True</option>
+                <option value="false">False</option>
+            </select>
+            <button onclick="setParam('pid_enabled', document.getElementById('pid_enabled_input').value)">Set & Save</button>
+
+            <label for="kp_input">Kp:</label>
+            <input type="number" step="0.001" id="kp_input">
+            <button onclick="setParam('kp', document.getElementById('kp_input').value)">Set & Save</button>
+
+            <label for="ki_input">Ki:</label>
+            <input type="number" step="0.0001" id="ki_input">
+            <button onclick="setParam('ki', document.getElementById('ki_input').value)">Set & Save</button>
+
+            <label for="kd_input">Kd:</label>
+            <input type="number" step="0.0001" id="kd_input">
+            <button onclick="setParam('kd', document.getElementById('kd_input').value)">Set & Save</button>
+
+            <label for="soft_start_time_step_ms_input">Soft Start Time Step (ms):</label>
+            <input type="number" id="soft_start_time_step_ms_input">
+            <button onclick="setParam('soft_start_time_step_ms', document.getElementById('soft_start_time_step_ms_input').value)">Set & Save</button>
+
+            <label for="soft_start_ramp_steps_input">Soft Start Ramp Steps:</label>
+            <input type="number" id="soft_start_ramp_steps_input">
+            <button onclick="setParam('soft_start_ramp_steps', document.getElementById('soft_start_ramp_steps_input').value)">Set & Save</button>
+
+            <label for="stop_position_default_input">Stop Position Default:</label>
+            <select id="stop_position_default_input">
+                <option value="UP">UP</option>
+                <option value="DOWN">DOWN</option>
+            </select>
+            <button onclick="setParam('stop_position_default', document.getElementById('stop_position_default_input').value)">Set & Save</button>
+            
+            <label for="calibrated_motor_power_free_running_percent_input">Calibrated Power Free Running (%):</label>
+            <input type="number" id="calibrated_motor_power_free_running_percent_input">
+            <button onclick="setParam('calibrated_motor_power_free_running_percent', document.getElementById('calibrated_motor_power_free_running_percent_input').value)">Set & Save</button>
+
+            <label for="calibrated_motor_power_load_offset_percent_input">Calibrated Power Load Offset (%):</label>
+            <input type="number" id="calibrated_motor_power_load_offset_percent_input">
+            <button onclick="setParam('calibrated_motor_power_load_offset_percent', document.getElementById('calibrated_motor_power_load_offset_percent_input').value)">Set & Save</button>
+            
+            <label for="autotune_target_rpm_input">Autotune Target RPM:</label>
+            <input type="number" id="autotune_target_rpm_input">
+            <button onclick="setParam('autotune_target_rpm', document.getElementById('autotune_target_rpm_input').value)">Set & Save</button>
+
+            <label for="autotune_power_high_input">Autotune Power High (%):</label>
+            <input type="number" id="autotune_power_high_input">
+            <button onclick="setParam('autotune_power_high', document.getElementById('autotune_power_high_input').value)">Set & Save</button>
+
+            <label for="autotune_power_low_input">Autotune Power Low (%):</label>
+            <input type="number" id="autotune_power_low_input">
+            <button onclick="setParam('autotune_power_low', document.getElementById('autotune_power_low_input').value)">Set & Save</button>
+
+            <label for="wifi_ssid_input">WiFi SSID:</label>
+            <input type="text" id="wifi_ssid_input">
+            <button onclick="setParam('wifi_ssid', document.getElementById('wifi_ssid_input').value)">Set & Save</button>
+
+            <label for="wifi_password_input">WiFi Password:</label>
+            <input type="password" id="wifi_password_input">
+            <button onclick="setParam('wifi_password', document.getElementById('wifi_password_input').value)">Set & Save</button>
+        </div>
+
+        <div class="section">
+            <h2>System Control</h2>
+            <button class="red" onclick="rebootPico()">Reboot Pico</button>
+            <p>Reboots the Raspberry Pi Pico W.</p>
+        </div>
+    </div>
+    <script src="/static/script.js"></script>
+    <script>
+        // Initial population of input fields when the page loads
+        // This is a simple placeholder. In a real app, you'd fetch initial config
+        // values from the server or render them directly from a templating engine.
+        // For MicroPython, we'll fetch them via status update.
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStatus(); // Call immediately on load to populate
+            setInterval(updateStatus, 500); // Update every 0.5 seconds
+
+            // Simple styling for input fields to reflect initial state from placeholder
+            // Will be overwritten by first status update
+            document.getElementById('max_rpm_setting_input').value = '500';
+            document.getElementById('pid_enabled_input').value = 'false';
+            document.getElementById('kp_input').value = '0.5';
+            document.getElementById('ki_input').value = '0.01';
+            document.getElementById('kd_input').value = '0.05';
+            document.getElementById('soft_start_time_step_ms_input').value = '20';
+            document.getElementById('soft_start_ramp_steps_input').value = '50';
+            document.getElementById('stop_position_default_input').value = 'DOWN';
+            document.getElementById('calibrated_motor_power_free_running_percent_input').value = '80';
+            document.getElementById('calibrated_motor_power_load_offset_percent_input').value = '10';
+            document.getElementById('autotune_target_rpm_input').value = '300';
+            document.getElementById('autotune_power_high_input').value = '70';
+            document.getElementById('autotune_power_low_input').value = '30';
+            document.getElementById('wifi_ssid_input').value = 'SSID_Default';
+            document.getElementById('wifi_password_input').value = 'WI_Fi_Password';
+        });
+
+    </script>
+</body>
+</html>
